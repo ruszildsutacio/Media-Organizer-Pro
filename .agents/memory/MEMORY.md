@@ -1,0 +1,2 @@
+- [Expo file-system web safety](expo-fs-web-safety.md) — expo-file-system's Directory/File classes crash on web preview target; guard with Platform.OS checks.
+- [Folder id vs display name decoupling](media-organizer-folder-id-pattern.md) — store folders/files by stable id on disk, names only in metadata, to make renames trivial.

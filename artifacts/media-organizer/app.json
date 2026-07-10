@@ -1,0 +1,61 @@
+{
+  "expo": {
+    "name": "Snapfolio",
+    "slug": "media-organizer",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/icon.png",
+    "scheme": "media-organizer",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/images/icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0B0D10"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "infoPlist": {
+        "NSCameraUsageDescription": "Snapfolio needs camera access so you can capture photos and videos directly into your folders.",
+        "NSMicrophoneUsageDescription": "Snapfolio needs microphone access to record audio with your videos.",
+        "NSPhotoLibraryUsageDescription": "Snapfolio needs photo library access to save and organize your captured media.",
+        "NSPhotoLibraryAddUsageDescription": "Snapfolio needs permission to save photos and videos you capture."
+      }
+    },
+    "android": {
+      "permissions": [
+        "CAMERA",
+        "RECORD_AUDIO",
+        "READ_MEDIA_IMAGES",
+        "READ_MEDIA_VIDEO",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE"
+      ]
+    },
+    "web": {
+      "favicon": "./assets/images/icon.png"
+    },
+    "plugins": [
+      [
+        "expo-router",
+        {
+          "origin": "https://replit.com/"
+        }
+      ],
+      "expo-font",
+      "expo-web-browser",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Snapfolio needs photo library access to save and organize your captured media.",
+          "cameraPermission": "Snapfolio needs camera access so you can capture photos and videos directly into your folders.",
+          "microphonePermission": "Snapfolio needs microphone access to record audio with your videos."
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true,
+      "reactCompiler": true
+    }
+  }
+}
