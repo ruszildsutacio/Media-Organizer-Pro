@@ -1,3 +1,4 @@
+import { Platform } from 'react-native';
 import { Directory, File } from 'expo-file-system';
 import * as Print from 'expo-print';
 import { getExportsDirectory, sanitizeFileName } from '@/lib/fs';
@@ -26,6 +27,9 @@ export async function generatePdfFromItems(
 ): Promise<File> {
   if (sources.length === 0) {
     throw new Error('Select at least one photo to convert to PDF.');
+  }
+  if (Platform.OS === 'web') {
+    throw new Error('PDF export is only available in the mobile app.');
   }
 
   const pageMarkup = await Promise.all(

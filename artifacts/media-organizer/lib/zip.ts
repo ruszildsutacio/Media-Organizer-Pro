@@ -1,3 +1,4 @@
+import { Platform } from 'react-native';
 import JSZip from 'jszip';
 import { Directory, File } from 'expo-file-system';
 import { getExportsDirectory, getItemFile, sanitizeFileName, uniqueName } from '@/lib/fs';
@@ -9,6 +10,9 @@ import type { MediaFolder, MediaItem } from '@/types/media';
  * and saves the result into the app's cache directory.
  */
 export async function zipFolder(folder: MediaFolder, items: MediaItem[]): Promise<File> {
+  if (Platform.OS === 'web') {
+    throw new Error('Zip export is only available in the mobile app.');
+  }
   const zip = new JSZip();
   const rootName = sanitizeFileName(folder.name) || 'Folder';
   const root = zip.folder(rootName) ?? zip;

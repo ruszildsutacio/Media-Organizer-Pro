@@ -16,4 +16,10 @@ export interface MediaItem {
   displayName: string;
   extension: string;
   createdAt: number;
+  /**
+   * On web only: the original blob/data URI returned by the picker. Web has
+   * no working native file storage, so web captures are referenced directly
+   * instead of being copied to disk.
+   */
+  webUri?: string;
 }

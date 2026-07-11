@@ -6,6 +6,7 @@ import React, {
   useMemo,
   useState,
 } from 'react';
+import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Directory, File } from 'expo-file-system';
 import {
@@ -102,6 +103,7 @@ export function MediaLibraryProvider({ children }: { children: React.ReactNode }
   );
 
   const getItemUri = useCallback((item: MediaItem) => {
+    if (item.webUri) return item.webUri;
     return getItemFile(item.folderId, item.fileName).uri;
   }, []);
 
@@ -197,9 +199,14 @@ export function MediaLibraryProvider({ children }: { children: React.ReactNode }
       const extension = extensionFromUri(uri, type === 'video' ? '.mov' : '.jpg');
       const fileName = `${id}${extension}`;
 
-      const destination = getItemFile(targetFolder.id, fileName);
-      const source = new File(uri);
-      source.copy(destination);
+      // The web target has no working native file-system implementation, so
+      // web captures reference the picker's original blob/data URI directly
+      // instead of being copied into app storage.
+      if (Platform.OS !== 'web') {
+        const destination = getItemFile(targetFolder.id, fileName);
+        const source = new File(uri);
+        source.copy(destination);
+      }
 
       const item: MediaItem = {
         id,
@@ -209,6 +216,7 @@ export function MediaLibraryProvider({ children }: { children: React.ReactNode }
         displayName: `${type === 'photo' ? 'Photo' : 'Video'} ${countInFolder + 1}`,
         extension,
         createdAt: Date.now(),
+        webUri: Platform.OS === 'web' ? uri : undefined,
       };
 
       const nextItems = [item, ...items];
