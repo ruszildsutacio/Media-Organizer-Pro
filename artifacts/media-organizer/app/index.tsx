@@ -16,6 +16,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ActionMenu, type ActionMenuOption } from '@/components/ActionMenu';
 import { EmptyState } from '@/components/EmptyState';
 import { FolderCard } from '@/components/FolderCard';
+import { ProgressOverlay } from '@/components/ProgressOverlay';
 import { PromptModal } from '@/components/PromptModal';
 import { useMediaLibrary } from '@/context/MediaLibraryContext';
 import { useColors } from '@/hooks/useColors';
@@ -35,6 +36,8 @@ export default function DashboardScreen() {
   const [renameTarget, setRenameTarget] = useState<MediaFolder | null>(null);
 
   const [cameraPermission, requestCameraPermission] = ImagePicker.useCameraPermissions();
+  const [libraryPermission, requestLibraryPermission] = ImagePicker.useMediaLibraryPermissions();
+  const [galleryProgress, setGalleryProgress] = useState(false);
 
   const sortedFolders = useMemo(
     () => [...folders].sort((a, b) => b.createdAt - a.createdAt),
@@ -72,9 +75,42 @@ export default function DashboardScreen() {
     }
   }
 
+  async function ensureLibraryPermission(): Promise<boolean> {
+    if (isWeb) return true;
+    if (libraryPermission?.granted) return true;
+    if (libraryPermission && !libraryPermission.canAskAgain) {
+      Alert.alert('Photo access needed', 'Enable photo library access in Settings to add media.');
+      return false;
+    }
+    const result = await requestLibraryPermission();
+    return result.granted;
+  }
+
+  async function handlePickFromGallery() {
+    const granted = await ensureLibraryPermission();
+    if (!granted) return;
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images', 'videos'],
+      allowsMultipleSelection: !isWeb,
+      quality: 0.8,
+    });
+    if (result.canceled || !result.assets?.length) return;
+    setGalleryProgress(true);
+    try {
+      for (const asset of result.assets) {
+        const type = asset.type === 'video' ? 'video' : 'photo';
+        await captureMedia({ uri: asset.uri, type });
+      }
+      if (!isWeb) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } finally {
+      setGalleryProgress(false);
+    }
+  }
+
   const fabOptions: ActionMenuOption[] = [
     { key: 'photo', label: 'Take Photo', icon: 'camera', onPress: () => handleCapture('photo') },
     { key: 'video', label: 'Record Video', icon: 'video', onPress: () => handleCapture('video') },
+    { key: 'gallery', label: 'Choose from Gallery', icon: 'image', onPress: handlePickFromGallery },
     {
       key: 'folder',
       label: 'Create New Folder',
@@ -208,6 +244,8 @@ export default function DashboardScreen() {
           setRenameTarget(null);
         }}
       />
+
+      <ProgressOverlay visible={galleryProgress} label="Adding media…" />
     </View>
   );
 }

@@ -55,6 +55,7 @@ export default function FolderDetailScreen() {
   const [progress, setProgress] = useState<string | null>(null);
 
   const [cameraPermission, requestCameraPermission] = ImagePicker.useCameraPermissions();
+  const [libraryPermission, requestLibraryPermission] = ImagePicker.useMediaLibraryPermissions();
 
   const selectedPhotos = useMemo(
     () => items.filter((item) => item.type === 'photo' && selectedIds.has(item.id)),
@@ -92,6 +93,38 @@ export default function FolderDetailScreen() {
     if (!isWeb) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
   }
 
+  async function ensureLibraryPermission(): Promise<boolean> {
+    if (isWeb) return true;
+    if (libraryPermission?.granted) return true;
+    if (libraryPermission && !libraryPermission.canAskAgain) {
+      Alert.alert('Photo access needed', 'Enable photo library access in Settings to add media.');
+      return false;
+    }
+    const result = await requestLibraryPermission();
+    return result.granted;
+  }
+
+  async function handlePickFromGallery() {
+    const granted = await ensureLibraryPermission();
+    if (!granted) return;
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images', 'videos'],
+      allowsMultipleSelection: !isWeb,
+      quality: 0.8,
+    });
+    if (result.canceled || !result.assets?.length) return;
+    setProgress(result.assets.length > 1 ? 'Adding media…' : null);
+    try {
+      for (const asset of result.assets) {
+        const type = asset.type === 'video' ? 'video' : 'photo';
+        await captureMedia({ uri: asset.uri, type, folderId: folder!.id });
+      }
+      if (!isWeb) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } finally {
+      setProgress(null);
+    }
+  }
+
   function toggleSelected(itemId: string) {
     setSelectedIds((prev) => {
       const next = new Set(prev);
@@ -111,17 +144,20 @@ export default function FolderDetailScreen() {
     try {
       setProgress('Generating PDF…');
       const sources = selectedPhotos.map((item) => ({ item, uri: getItemUri(item) }));
-      const file = await generatePdfFromItems(folder!.name, sources);
+      const result = await generatePdfFromItems(folder!.name, sources);
       setProgress(null);
       exitSelectMode();
       if (!isWeb) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      if (result.webDownloaded) {
+        return;
+      }
       if (await Sharing.isAvailableAsync()) {
-        await Sharing.shareAsync(file.uri, {
+        await Sharing.shareAsync(result.uri, {
           mimeType: 'application/pdf',
           dialogTitle: `${folder!.name}.pdf`,
         });
       } else {
-        Alert.alert('PDF saved', `Saved to ${file.uri}`);
+        Alert.alert('PDF saved', `Saved to ${result.uri}`);
       }
     } catch (err) {
       setProgress(null);
@@ -136,16 +172,19 @@ export default function FolderDetailScreen() {
     }
     try {
       setProgress('Compressing folder…');
-      const file = await zipFolder(folder!, items);
+      const result = await zipFolder(folder!, items);
       setProgress(null);
       if (!isWeb) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      if (result.webDownloaded) {
+        return;
+      }
       if (await Sharing.isAvailableAsync()) {
-        await Sharing.shareAsync(file.uri, {
+        await Sharing.shareAsync(result.uri, {
           mimeType: 'application/zip',
           dialogTitle: `${folder!.name}.zip`,
         });
       } else {
-        Alert.alert('ZIP saved', `Saved to ${file.uri}`);
+        Alert.alert('ZIP saved', `Saved to ${result.uri}`);
       }
     } catch (err) {
       setProgress(null);
@@ -156,6 +195,7 @@ export default function FolderDetailScreen() {
   const addOptions: ActionMenuOption[] = [
     { key: 'photo', label: 'Take Photo', icon: 'camera', onPress: () => handleCapture('photo') },
     { key: 'video', label: 'Record Video', icon: 'video', onPress: () => handleCapture('video') },
+    { key: 'gallery', label: 'Choose from Gallery', icon: 'image', onPress: handlePickFromGallery },
   ];
 
   const folderOptions: ActionMenuOption[] = [
