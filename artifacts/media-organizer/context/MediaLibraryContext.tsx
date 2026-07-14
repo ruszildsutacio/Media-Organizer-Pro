@@ -43,6 +43,8 @@ interface MediaLibraryContextValue {
   deleteItem: (itemId: string) => void;
   captureMedia: (params: CaptureParams) => Promise<MediaItem>;
   ensureTodayFolder: () => MediaFolder;
+  getLatestFolder: () => MediaFolder | undefined;
+  ensureLatestFolder: () => MediaFolder;
 }
 
 const MediaLibraryContext = createContext<MediaLibraryContextValue | null>(null);
@@ -129,6 +131,17 @@ export function MediaLibraryProvider({ children }: { children: React.ReactNode }
     if (existing) return existing;
     return createFolder(name);
   }, [folders, createFolder]);
+
+  const getLatestFolder = useCallback((): MediaFolder | undefined => {
+    if (folders.length === 0) return undefined;
+    return [...folders].sort((a, b) => b.createdAt - a.createdAt)[0];
+  }, [folders]);
+
+  const ensureLatestFolder = useCallback((): MediaFolder => {
+    const latest = getLatestFolder();
+    if (latest) return latest;
+    return createFolder('Default Folder');
+  }, [getLatestFolder, createFolder]);
 
   const renameFolder = useCallback(
     (folderId: string, name: string) => {
@@ -243,6 +256,8 @@ export function MediaLibraryProvider({ children }: { children: React.ReactNode }
       deleteItem,
       captureMedia,
       ensureTodayFolder,
+      getLatestFolder,
+      ensureLatestFolder,
     }),
     [
       ready,
@@ -259,6 +274,8 @@ export function MediaLibraryProvider({ children }: { children: React.ReactNode }
       deleteItem,
       captureMedia,
       ensureTodayFolder,
+      getLatestFolder,
+      ensureLatestFolder,
     ],
   );
 

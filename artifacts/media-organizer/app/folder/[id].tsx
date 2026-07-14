@@ -11,17 +11,19 @@ import {
 import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
-import * as Sharing from 'expo-sharing';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ActionMenu, type ActionMenuOption } from '@/components/ActionMenu';
 import { EmptyState } from '@/components/EmptyState';
 import { MediaThumb } from '@/components/MediaThumb';
+import { MediaViewerModal } from '@/components/MediaViewerModal';
 import { PromptModal } from '@/components/PromptModal';
 import { ProgressOverlay } from '@/components/ProgressOverlay';
 import { useMediaLibrary } from '@/context/MediaLibraryContext';
 import { useColors } from '@/hooks/useColors';
+import { fileNameFromUri, saveFileToPublicStorage } from '@/lib/download';
 import { generatePdfFromItems } from '@/lib/pdf';
+import { shareFile } from '@/lib/sharing';
 import { zipFolder } from '@/lib/zip';
 import type { MediaItem } from '@/types/media';
 
@@ -53,6 +55,7 @@ export default function FolderDetailScreen() {
   const [renameFolderVisible, setRenameFolderVisible] = useState(false);
   const [renameItemTarget, setRenameItemTarget] = useState<MediaItem | null>(null);
   const [progress, setProgress] = useState<string | null>(null);
+  const [viewerItem, setViewerItem] = useState<MediaItem | null>(null);
 
   const [cameraPermission, requestCameraPermission] = ImagePicker.useCameraPermissions();
   const [libraryPermission, requestLibraryPermission] = ImagePicker.useMediaLibraryPermissions();
@@ -145,18 +148,34 @@ export default function FolderDetailScreen() {
       setProgress('Generating PDF…');
       const sources = selectedPhotos.map((item) => ({ item, uri: getItemUri(item) }));
       const result = await generatePdfFromItems(folder!.name, sources);
-      setProgress(null);
       exitSelectMode();
       if (!isWeb) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       if (result.webDownloaded) {
+        // Browsers already save downloads to the user's public Downloads
+        // folder, so there's nothing further to do here.
+        setProgress(null);
         return;
       }
-      if (await Sharing.isAvailableAsync()) {
-        await Sharing.shareAsync(result.uri, {
-          mimeType: 'application/pdf',
-          dialogTitle: `${folder!.name}.pdf`,
-        });
+
+      if (Platform.OS === 'android') {
+        setProgress('Saving to device storage…');
+        const fileName = fileNameFromUri(result.uri, `${folder!.name}.pdf`);
+        const saveResult = await saveFileToPublicStorage(result.uri, fileName, 'application/pdf');
+        setProgress(null);
+        if (saveResult.saved) {
+          Alert.alert('PDF downloaded', 'Saved to your selected folder — you can find it outside the app.');
+          return;
+        }
+        // User declined the folder picker or the save failed — fall back
+        // to the share sheet below so they still have a way to get the file.
       } else {
+        setProgress(null);
+      }
+
+      const shareResult = await shareFile(result.uri, 'application/pdf', `${folder!.name}.pdf`);
+      if (shareResult.blocked) {
+        Alert.alert('Please wait', 'A share is already in progress.');
+      } else if (!shareResult.shared) {
         Alert.alert('PDF saved', `Saved to ${result.uri}`);
       }
     } catch (err) {
@@ -178,12 +197,10 @@ export default function FolderDetailScreen() {
       if (result.webDownloaded) {
         return;
       }
-      if (await Sharing.isAvailableAsync()) {
-        await Sharing.shareAsync(result.uri, {
-          mimeType: 'application/zip',
-          dialogTitle: `${folder!.name}.zip`,
-        });
-      } else {
+      const shareResult = await shareFile(result.uri, 'application/zip', `${folder!.name}.zip`);
+      if (shareResult.blocked) {
+        Alert.alert('Please wait', 'A share is already in progress.');
+      } else if (!shareResult.shared) {
         Alert.alert('ZIP saved', `Saved to ${result.uri}`);
       }
     } catch (err) {
@@ -252,6 +269,19 @@ export default function FolderDetailScreen() {
           </Text>
         </View>
         <View style={styles.headerActions}>
+          {items.some((item) => item.type === 'photo') ? (
+            <Pressable
+              onPress={() => (selectMode ? exitSelectMode() : setSelectMode(true))}
+              hitSlop={10}
+              style={styles.headerButton}
+            >
+              <Feather
+                name={selectMode ? 'x-square' : 'check-square'}
+                size={20}
+                color={colors.foreground}
+              />
+            </Pressable>
+          ) : null}
           <Pressable onPress={() => setAddMenuVisible(true)} hitSlop={10} style={styles.headerButton}>
             <Feather name="camera" size={20} color={colors.foreground} />
           </Pressable>
@@ -287,8 +317,7 @@ export default function FolderDetailScreen() {
                 if (selectMode) {
                   if (item.type === 'photo') toggleSelected(item.id);
                 } else {
-                  setSelectMode(true);
-                  if (item.type === 'photo') toggleSelected(item.id);
+                  setViewerItem(item);
                 }
               }}
               onLongPress={() => setItemMenuTarget(item)}
@@ -382,6 +411,12 @@ export default function FolderDetailScreen() {
       />
 
       <ProgressOverlay visible={!!progress} label={progress ?? ''} />
+
+      <MediaViewerModal
+        item={viewerItem}
+        uri={viewerItem ? getItemUri(viewerItem) : null}
+        onClose={() => setViewerItem(null)}
+      />
     </View>
   );
 }
