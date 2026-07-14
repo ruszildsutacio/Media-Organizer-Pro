@@ -79,7 +79,10 @@ export default function DashboardScreen() {
 
     if (result.canceled || !result.assets?.[0]) return;
 
-    await captureMedia({ uri: result.assets[0].uri, type });
+    // Save directly into the most recently created folder (creating a
+    // default folder first if none exist yet), rather than a dated folder.
+    const targetFolder = ensureLatestFolder();
+    await captureMedia({ uri: result.assets[0].uri, type, folderId: targetFolder.id });
     if (!isWeb) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     }
@@ -114,26 +117,6 @@ export default function DashboardScreen() {
       if (!isWeb) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } finally {
       setGalleryProgress(false);
-    }
-  }
-
-  async function handleQuickCapture() {
-    const granted = await ensureCameraPermission();
-    if (!granted) return;
-
-    const result = await ImagePicker.launchCameraAsync({
-      mediaTypes: ['images'],
-      quality: 0.8,
-    });
-
-    if (result.canceled || !result.assets?.[0]) return;
-
-    // Save directly into the most recently created folder (creating a
-    // default folder first if none exist yet), rather than a dated folder.
-    const targetFolder = ensureLatestFolder();
-    await captureMedia({ uri: result.assets[0].uri, type: 'photo', folderId: targetFolder.id });
-    if (!isWeb) {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     }
   }
 
@@ -182,27 +165,10 @@ export default function DashboardScreen() {
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
-        <View style={styles.headerRow}>
-          <View>
-            <Text style={[styles.title, { color: colors.foreground }]}>Snapfolio</Text>
-            <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>
-              {folders.length} {folders.length === 1 ? 'folder' : 'folders'}
-            </Text>
-          </View>
-
-          <Pressable
-            onPress={handleQuickCapture}
-            style={({ pressed }) => [
-              styles.quickCaptureButton,
-              { backgroundColor: colors.primary, opacity: pressed ? 0.88 : 1 },
-            ]}
-          >
-            <Feather name="camera" size={18} color={colors.primaryForeground} />
-            <Text style={[styles.quickCaptureLabel, { color: colors.primaryForeground }]}>
-              Take Picture
-            </Text>
-          </Pressable>
-        </View>
+        <Text style={[styles.title, { color: colors.foreground }]}>Snapfolio</Text>
+        <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>
+          {folders.length} {folders.length === 1 ? 'folder' : 'folders'}
+        </Text>
       </View>
 
       {!ready ? null : sortedFolders.length === 0 ? (
@@ -302,30 +268,6 @@ const styles = StyleSheet.create({
   header: {
     paddingHorizontal: 20,
     paddingBottom: 16,
-  },
-  headerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 12,
-  },
-  quickCaptureButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 14,
-    shadowColor: '#000',
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 3 },
-    elevation: 5,
-  },
-  quickCaptureLabel: {
-    fontSize: 13,
-    fontFamily: 'Inter_600SemiBold',
-    fontWeight: '600',
   },
   title: {
     fontSize: 28,
