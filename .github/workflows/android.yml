@@ -9,10 +9,6 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    # THIS LINE TELLS GITHUB TO RUN EVERYTHING INSIDE YOUR SUBFOLDER:
-    defaults:
-      run:
-        working-directory: artifacts/media-organizer
 
     steps:
     - uses: actions/checkout@v4
@@ -27,17 +23,15 @@ jobs:
       with:
         version: 9
 
-    - name: Install Expo CLI and EAS CLI
+    - name: Install Expo CLI and EAS CLI Globally
       run: pnpm install -g expo-cli eas-cli
-      # We override the directory back to root here just to install global packages safely
-      defaults:
-        run:
-          working-directory: .
 
-    - name: Install dependencies
-      run: pnpm install --frozen-lockfile
+    - name: Install Monorepo Workspace Dependencies
+      run: pnpm install --no-frozen-lockfile
 
     - name: Build APK on EAS
-      run: eas build --platform android --profile development --non-interactive
+      run: |
+        cd artifacts/media-organizer
+        eas build --platform android --profile development --non-interactive
       env:
         EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
