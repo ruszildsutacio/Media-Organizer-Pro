@@ -1,8 +1,4 @@
 {
-  "cli": {
-    "version": ">= 5.0.0",
-    "nodeWorkspace": "artifacts/media-organizer"
-  },
   "build": {
     "development": {
       "developmentClient": true,
