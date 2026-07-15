@@ -1,7 +1,4 @@
 {
-  "cli": {
-    "packageManager": "pnpm"
-  },
   "build": {
     "development": {
       "developmentClient": true,
