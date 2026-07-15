@@ -9,7 +9,7 @@
     "serve": "node server/serve.js",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
-  "devDependencies": {
+  "dependencies": {
     "@babel/core": "^7.25.2",
     "@expo-google-fonts/inter": "^0.4.0",
     "@expo/cli": "54.0.23",
@@ -26,6 +26,7 @@
     "expo": "~54.0.27",
     "expo-blur": "~15.0.8",
     "expo-constants": "~18.0.11",
+    "expo-dev-client": "~6.0.1",
     "expo-file-system": "~19.0.23",
     "expo-font": "~14.0.10",
     "expo-glass-effect": "~0.1.4",
@@ -58,9 +59,5 @@
     "typescript": "~5.9.2",
     "zod": "catalog:",
     "zod-validation-error": "^3.4.0"
-  },
-  "dependencies": {
-    "expo-video": "^3.0.16",
-    "jspdf": "^4.2.1"
   }
 }
