@@ -23,14 +23,14 @@ jobs:
       with:
         version: 9
 
-    - name: Install Expo CLI and EAS CLI Globally
-      run: pnpm install -g expo-cli eas-cli
+    - name: Install EAS CLI Globally
+      run: pnpm install -g eas-cli
 
-    - name: Install Monorepo Workspace Dependencies
-      run: pnpm install --no-frozen-lockfile
+    - name: Install All Monorepo Dependencies
+      run: pnpm install
 
     - name: Build APK on EAS
-      run: cd artifacts/media-organizer && eas build --platform android --profile development --non-interactive
+      run: |
+        pnpm --filter @workspace/media-organizer exec eas build --platform android --profile development --non-interactive
       env:
         EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
-        EAS_NO_WORKSPACE: 1
