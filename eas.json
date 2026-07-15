@@ -6,6 +6,9 @@
     },
     "production": {
       "distribution": "store"
+    },
+    "Production": {
+      "distribution": "store"
     }
   }
 }
