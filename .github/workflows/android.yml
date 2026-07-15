@@ -30,8 +30,7 @@ jobs:
       run: pnpm install --no-frozen-lockfile
 
     - name: Build APK on EAS
-      run: |
-        cd artifacts/media-organizer
-        eas build --platform android --profile development --non-interactive
+      run: cd artifacts/media-organizer && eas build --platform android --profile development --non-interactive
       env:
         EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        EAS_NO_WORKSPACE: 1
